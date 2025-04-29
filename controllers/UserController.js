@@ -166,10 +166,44 @@ export const CompleteUserProfile = async (req, res) => {
         });
     }
 };
-
 export const FetchPosts = async (req, res) => {
     try {
-        const redditResponse = await axios.get("https://www.reddit.com/r/all/top.json?limit=5");
+        const existingTwitterPosts = await PostModel.find({ source: "Twitter" });
+        if (existingTwitterPosts.length === 0) {
+            const fakeTwitterPosts = [
+                {
+                    source: "Twitter",
+                    postId: `tw_${uuidv4()}`,
+                    title: "Sample Tweet",
+                    url: `http://fake.twitter.com/${Date.now()}`,
+                    content: "This is a fake tweet for testing!",
+                    author: "FakeUser",
+                    createdAt: new Date(),
+                },
+                {
+                    source: "Twitter",
+                    postId: `tw_${uuidv4()}`,
+                    title: "Sample Tweet 1",
+                    url: `http://fake.twitter.com/${Date.now()}`,
+                    content: "This is another fake tweet for testing!",
+                    author: "FakeUser1",
+                    createdAt: new Date(),
+                },
+                {
+                    source: "Twitter",
+                    postId: `tw_${uuidv4()}`,
+                    title: "Sample Tweet 2",
+                    url: `http://fake.twitter.com/${Date.now()}`,
+                    content: "This is another fake tweet for testing!",
+                    author: "FakeUser2",
+                    createdAt: new Date(),
+                },
+            ];
+
+            await PostModel.insertMany(fakeTwitterPosts, { ordered: false });
+        }
+
+        const redditResponse = await axios.get("https://www.reddit.com/r/all/top.json?limit=3");
         const redditPosts = redditResponse.data.data.children.map((post) => ({
             source: "Reddit",
             postId: post.data.id,
@@ -179,47 +213,16 @@ export const FetchPosts = async (req, res) => {
             author: post.data.author,
             createdAt: new Date(post.data.created_utc * 1000),
         }));
-        const fakeTwitterPosts = [
-            {
-                source: "Twitter",
-                postId: `tw_${uuidv4()}`,
-                title: "Sample Tweet",
-                url: `http://fake.twitter.com/${Date.now()}`,
-                content: "This is a fake tweet for testing!",
-                author: "FakeUser",
-                createdAt: new Date(),
-            },
-            {
-                source: "Twitter",
-                postId: `tw_${uuidv4()}`,
-                title: "Sample Tweet 1",
-                url: `http://fake.twitter.com/${Date.now()}`,
-                content: "This is another  fake tweet for testing!",
-                author: "FakeUser1",
-                createdAt: new Date(),
-            },
-            {
-                source: "Twitter",
-                postId: `tw_${uuidv4()}`,
-                title: "Sample Tweet 2",
-                url: `http://fake.twitter.com/${Date.now()}`,
-                content: "This is another  fake tweet for testing!",
-                author: "FakeUser2",
-                createdAt: new Date(),
-            },
-            {
-                source: "Twitter",
-                postId: `tw_${uuidv4()}`,
-                title: "Sample Tweet 3",
-                url: `http://fake.twitter.com/${Date.now()}`,
-                content: "This is another  fake tweet for testing!",
-                author: "FakeUser3",
-                createdAt: new Date(),
-            },
-        ];
-        const posts = [...redditPosts, ...fakeTwitterPosts];
-        await PostModel.insertMany(posts, { ordered: false });
-        const storedPosts = await PostModel.find().sort({ fetchedAt: -1 }).limit(20);
+
+        for (const post of redditPosts) {
+            const exists = await PostModel.findOne({ postId: post.postId });
+            if (!exists) {
+                await PostModel.create(post);
+            }
+        }
+
+        const storedPosts = await PostModel.find().sort({ createdAt: -1 }).limit(20);
+
         return res.status(200).json({
             message: "Posts fetched successfully",
             success: true,
