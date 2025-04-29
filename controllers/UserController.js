@@ -277,14 +277,7 @@ export const ReportPost = async (req, res) => {
     try {
         const { postId } = req.params;
         const { userId } = req.user;
-        const { reason } = req.body;
-        if (!reason) {
-            return res.status(400).json({
-                message: "Reason is required",
-                success: false,
-                error: "BadRequest",
-            });
-        }
+  
         const post = await PostModel.findById(postId);
         if (!post) {
             return res.status(404).json({
@@ -301,7 +294,7 @@ export const ReportPost = async (req, res) => {
                 error: "Conflict",
             });
         }
-        const report = new ReportHistoryModel({ userId, post: postId, reason, status: "Pending" });
+        const report = new ReportHistoryModel({ userId, post: postId,  status: "Pending" });
         await report.save();
         await UserModel.findByIdAndUpdate(userId, { $inc: { credits: 2 } });
         const newCreditHistory = new CreditHistory({
