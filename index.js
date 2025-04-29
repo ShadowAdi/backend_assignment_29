@@ -10,7 +10,7 @@ configDotenv()
 export const app = express()
 
 app.use(cors({
-    origin: "https://frontend-n74wu67c5-adityas-projects-32315b04.vercel.app",
+    origin: "https://frontend-three-lime-52.vercel.app",
     credentials: true
 }));
 app.use(express.json())
